@@ -11,6 +11,7 @@ Projeto desenvolvido para o Processo Seletivo da CISS. O objetivo é identificar
 - C++ (G++ 15.2.0)
 - [cpp-httplib](https://github.com/yhirose/cpp-httplib)
 - [nlohmann/json](https://github.com/nlohmann/json)
+- SQLite
 - Docker
 - Fly.io
 
@@ -20,7 +21,7 @@ Projeto desenvolvido para o Processo Seletivo da CISS. O objetivo é identificar
 
 - ✅ Nível 1 — Algoritmo `isSimian`
 - ✅ Nível 2 — API REST hospedada no Fly.io
-- 🔧 Nível 3 — Banco de dados e estatísticas (em desenvolvimento)
+- ✅ Nível 3 — Banco de dados e estatísticas
 
 ---
 
@@ -101,7 +102,6 @@ POST /simian
 ```
 ![Postman 403 Forbidden](docs/postman-humano.png)
 
-
 #### Via curl
 
 **Linux/Mac:**
@@ -139,9 +139,97 @@ docker build -t teste-simios-ciss .
 docker run -p 8080:8080 teste-simios-ciss
 ```
 
+---
+
+## Nível 3 — Banco de dados e estatísticas
+
+Usei SQLite para armazenar os DNAs verificados. O banco garante unicidade — se o mesmo DNA for enviado mais de uma vez, ele é ignorado e não duplica no banco.
+
+O endpoint `/stats` retorna a contagem de DNAs símios, humanos e a proporção entre eles.
+
+### Endpoint
+```
+GET /stats
+```
+
+### Resposta
+```json
+{
+  "count_mutant_dna": 3,
+  "count_human_dna": 3,
+  "ratio": 0.5
+}
+```
+
+### Testando via Postman
+
+1. Abra o Postman e crie uma nova requisição
+2. Selecione o método **GET**
+3. Cole a URL: `https://teste-simios-ciss.fly.dev/stats`
+4. Clique em **Send**
+
+### Testando via curl
+
+**Linux/Mac:**
+```bash
+curl https://teste-simios-ciss.fly.dev/stats
+```
+
+**Windows (PowerShell):**
+```powershell
+curl https://teste-simios-ciss.fly.dev/stats
+```
+
+### Sequência de testes para validar o banco
+
+Manda esses DNAs em ordem e verifica o `/stats` no final — a contagem deve bater exatamente com os DNAs únicos enviados.
+
+**Símios (3 únicos):**
+```powershell
+# 1. Símio horizontal
+curl -X POST https://teste-simios-ciss.fly.dev/simian -H "Content-Type: application/json" -d "{\"dna\":[\"ATGCGA\",\"CAGTGC\",\"TTATGT\",\"AGAAGG\",\"CCCCTA\",\"TCACTG\"]}"
+
+# 2. Símio vertical
+curl -X POST https://teste-simios-ciss.fly.dev/simian -H "Content-Type: application/json" -d "{\"dna\":[\"ATGCGA\",\"AGTCGC\",\"ATAGTT\",\"AGAAGG\",\"ATCCTA\",\"TCACTG\"]}"
+
+# 3. Símio diagonal
+curl -X POST https://teste-simios-ciss.fly.dev/simian -H "Content-Type: application/json" -d "{\"dna\":[\"ATGCGA\",\"CAGAGC\",\"TTAAGT\",\"AGAAGG\",\"CCCATA\",\"TCACTG\"]}"
+```
+
+**Humanos (3 únicos):**
+```powershell
+# 4. Humano
+curl -X POST https://teste-simios-ciss.fly.dev/simian -H "Content-Type: application/json" -d "{\"dna\":[\"ATGCGA\",\"CAGTGC\",\"TTATTT\",\"AGACGG\",\"GCGTCA\",\"TCACTG\"]}"
+
+# 5. Humano diferente
+curl -X POST https://teste-simios-ciss.fly.dev/simian -H "Content-Type: application/json" -d "{\"dna\":[\"TGCAAG\",\"CTAGTC\",\"GATCAG\",\"TCGAAT\",\"AGCTGA\",\"CATGCT\"]}"
+
+# 6. Humano diferente
+curl -X POST https://teste-simios-ciss.fly.dev/simian -H "Content-Type: application/json" -d "{\"dna\":[\"AGTCGA\",\"CTAGTC\",\"GATCAG\",\"TCGAAT\",\"AGCTGA\",\"CATGCT\"]}"
+```
+
+**DNAs repetidos (banco deve ignorar):**
+```powershell
+# 7. Mesmo DNA do teste 1 — não deve duplicar
+curl -X POST https://teste-simios-ciss.fly.dev/simian -H "Content-Type: application/json" -d "{\"dna\":[\"ATGCGA\",\"CAGTGC\",\"TTATGT\",\"AGAAGG\",\"CCCCTA\",\"TCACTG\"]}"
+
+# 8. Mesmo DNA do teste 4 — não deve duplicar
+curl -X POST https://teste-simios-ciss.fly.dev/simian -H "Content-Type: application/json" -d "{\"dna\":[\"ATGCGA\",\"CAGTGC\",\"TTATTT\",\"AGACGG\",\"GCGTCA\",\"TCACTG\"]}"
+```
+
+**Verificar stats (esperado: 3 símios, 3 humanos, ratio 0.5):**
+```powershell
+curl https://teste-simios-ciss.fly.dev/stats
+```
+
+---
+
 ## Estrutura
 ```
 TesteTecnicoCISS/
+├── docs/
+│   ├── postman-simio.png
+│   └── postman-humano.png
 ├── libs/
 │   ├── httplib.h
 │   └── json.hpp
@@ -149,7 +237,8 @@ TesteTecnicoCISS/
 │   ├── simian.cpp
 │   ├── simian.h
 │   ├── api.cpp
-│   └── database.cpp
+│   ├── database.cpp
+│   └── database.h
 ├── Dockerfile
 ├── fly.toml
 ├── CMakeLists.txt

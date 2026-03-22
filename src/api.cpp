@@ -1,6 +1,7 @@
 #include "../libs/httplib.h"
 #include "../libs/json.hpp"
 #include "simian.h"
+#include "database.h"
 
 #include <iostream>
 #include <vector>
@@ -9,6 +10,8 @@
 using json = nlohmann::json;
 
 int main() {
+    dbInit();
+
     httplib::Server server;
 
     server.Post("/simian", [](const httplib::Request& req, httplib::Response& res) {
@@ -32,6 +35,8 @@ int main() {
         std::vector<std::string> dna = body["dna"].get<std::vector<std::string>>();
         bool simian = isSimian(dna);
 
+        dbSaveDna(dna, simian);
+
         if (simian) {
             res.status = 200;
             res.set_content(R"({"message":"Símio detectado"})", "application/json");
@@ -39,6 +44,17 @@ int main() {
             res.status = 403;
             res.set_content(R"({"message":"Humano detectado"})", "application/json");
         }
+    });
+
+    server.Get("/stats", [](const httplib::Request&, httplib::Response& res) {
+        Stats stats = dbGetStats();
+
+        json response;
+        response["count_mutant_dna"] = stats.countSimian;
+        response["count_human_dna"]  = stats.countHuman;
+        response["ratio"]            = stats.ratio;
+
+        res.set_content(response.dump(), "application/json");
     });
 
     const int port = 8080;

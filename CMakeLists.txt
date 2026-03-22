@@ -7,10 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(api
     src/api.cpp
     src/simian.cpp
+    src/database.cpp
 )
 
 target_include_directories(api PRIVATE libs src)
 
 if(WIN32)
     target_link_libraries(api PRIVATE ws2_32)
+else()
+    target_link_libraries(api PRIVATE sqlite3)
 endif()
