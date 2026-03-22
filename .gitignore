@@ -1,0 +1,7 @@
+# Binários
+src/*.exe
+src/*.o
+src/*.out
+
+# Build
+build/
