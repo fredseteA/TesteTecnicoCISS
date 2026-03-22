@@ -56,6 +56,8 @@ A API está hospedada no Fly.io, escolhi essa plataforma pois já utilizo para h
 
 **Base URL:** `https://teste-simios-ciss.fly.dev`
 
+> ⚠️ A aplicação está hospedada no plano gratuito do Fly.io. A primeira requisição pode demorar alguns segundos para responder enquanto a máquina acorda. As seguintes serão normais.
+
 ### Endpoint
 ```
 POST /simian
